@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -14,20 +15,30 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    $tasks = auth()->user()->tasks()->with('category')->latest()->take(5)->get();
-    $categories = auth()->user()->categories()->get();
+Route::get('/dashboard', function (Request $request) {
+    $query = auth()->user()->tasks()->with('category');
     
+    // Filter by category if provided
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
     
-    $tasks->transform(function ($task) {
+    // Get paginated tasks
+    $tasks = $query->latest()->paginate(5);
+    
+    // Transform tasks to add computed properties
+    $tasks->getCollection()->transform(function ($task) {
         $task->is_due_soon = $task->isDueSoon();
         $task->is_overdue = $task->isOverdue();
         return $task;
     });
     
+    $categories = auth()->user()->categories()->get();
+    
     return Inertia::render('Dashboard', [
         'tasks' => $tasks,
         'categories' => $categories,
+        'filters' => $request->only(['category_id']),
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

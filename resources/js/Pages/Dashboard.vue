@@ -4,14 +4,16 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
-    tasks: Array,
-    categories: Array
+    tasks: Object, // Now a paginated object
+    categories: Array,
+    filters: Object
 })
 
 const showCreateForm = ref(false)
 const showCreateCategoryForm = ref(false)
 const editingTask = ref(null)
 const editingCategory = ref(null)
+const selectedCategory = ref(props.filters.category_id || '')
 
 const createForm = useForm({
     title: '',
@@ -105,6 +107,24 @@ const deleteCategory = (categoryId) => {
     }
 }
 
+const filterByCategory = (categoryId) => {
+    selectedCategory.value = categoryId
+    router.get(route('dashboard'), {
+        category_id: categoryId || null
+    }, {
+        preserveState: true,
+        replace: true
+    })
+}
+
+const clearFilter = () => {
+    selectedCategory.value = ''
+    router.get(route('dashboard'), {}, {
+        preserveState: true,
+        replace: true
+    })
+}
+
 const cancelEdit = () => {
     editingTask.value = null
     editForm.reset()
@@ -160,12 +180,6 @@ const formatDate = (date) => {
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Categories</h3>
                             <p class="text-gray-600 mb-4">Organize your tasks with categories</p>
                             <div class="flex gap-2">
-                                <Link
-                                    :href="route('categories.index')"
-                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
-                                >
-                                    Manage Categories
-                                </Link>
                                 <button
                                     @click="showCreateCategoryForm = !showCreateCategoryForm"
                                     class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
@@ -309,17 +323,41 @@ const formatDate = (date) => {
                     </div>
                 </div>
 
-                <!-- Recent Tasks -->
+                <!-- All Tasks -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6">
                         <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-lg font-medium text-gray-900">Recent Tasks</h3>
+                            <h3 class="text-lg font-medium text-gray-900">All Tasks</h3>
                             <button
                                 @click="showCreateForm = !showCreateForm"
                                 class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
                             >
                                 {{ showCreateForm ? 'Cancel' : 'Add Task' }}
                             </button>
+                        </div>
+
+                        <!-- Category Filter -->
+                        <div class="mb-6">
+                            <div class="flex items-center gap-4">
+                                <label class="text-sm font-medium text-gray-700">Filter by category:</label>
+                                <select
+                                    v-model="selectedCategory"
+                                    @change="filterByCategory(selectedCategory)"
+                                    class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                >
+                                    <option value="">All Categories</option>
+                                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                                        {{ category.name }}
+                                    </option>
+                                </select>
+                                <button
+                                    v-if="selectedCategory"
+                                    @click="clearFilter"
+                                    class="text-sm text-gray-500 hover:text-gray-700"
+                                >
+                                    Clear filter
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- Create Task Form -->
@@ -384,7 +422,7 @@ const formatDate = (date) => {
                             </form>
                         </div>
 
-                        <div v-if="tasks.length === 0 && !showCreateForm" class="text-center py-8 text-gray-500">
+                        <div v-if="tasks.data.length === 0 && !showCreateForm" class="text-center py-8 text-gray-500">
                             No tasks yet. Click "Add Task" to create your first task.
                         </div>
                         
@@ -452,7 +490,7 @@ const formatDate = (date) => {
                             </div>
 
                             <div
-                                v-for="task in tasks"
+                                v-for="task in tasks.data"
                                 :key="task.id"
                                 v-show="!editingTask || editingTask.id !== task.id"
                                 class="border rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -509,6 +547,45 @@ const formatDate = (date) => {
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div v-if="tasks.last_page > 1" class="mt-6 flex items-center justify-between">
+                            <div class="text-sm text-gray-700">
+                                Showing {{ tasks.from }} to {{ tasks.to }} of {{ tasks.total }} results
+                            </div>
+                            <div class="flex space-x-2">
+                                <Link
+                                    v-if="tasks.prev_page_url"
+                                    :href="tasks.prev_page_url"
+                                    class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                >
+                                    Previous
+                                </Link>
+                                <template v-for="page in tasks.links" :key="page.label">
+                                    <Link
+                                        v-if="page.url"
+                                        :href="page.url"
+                                        class="px-3 py-2 text-sm font-medium rounded-md"
+                                        :class="page.active 
+                                            ? 'text-white bg-indigo-600 border border-indigo-600' 
+                                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'"
+                                        v-html="page.label"
+                                    />
+                                    <span
+                                        v-else
+                                        class="px-3 py-2 text-sm font-medium text-gray-400 bg-white border border-gray-300 rounded-md"
+                                        v-html="page.label"
+                                    />
+                                </template>
+                                <Link
+                                    v-if="tasks.next_page_url"
+                                    :href="tasks.next_page_url"
+                                    class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                >
+                                    Next
+                                </Link>
                             </div>
                         </div>
                     </div>
