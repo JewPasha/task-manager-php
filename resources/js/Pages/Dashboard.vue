@@ -11,6 +11,7 @@ const props = defineProps({
 const showCreateForm = ref(false)
 const showCreateCategoryForm = ref(false)
 const editingTask = ref(null)
+const editingCategory = ref(null)
 
 const createForm = useForm({
     title: '',
@@ -22,6 +23,12 @@ const createForm = useForm({
 const categoryForm = useForm({
     name: '',
     color: '#3B82F6',
+    from_dashboard: true,
+})
+
+const editCategoryForm = useForm({
+    name: '',
+    color: '',
     from_dashboard: true,
 })
 
@@ -65,6 +72,37 @@ const createCategory = () => {
             showCreateCategoryForm.value = false
         }
     })
+}
+
+const editCategory = (category) => {
+    editingCategory.value = category
+    editCategoryForm.name = category.name
+    editCategoryForm.color = category.color
+}
+
+const updateCategory = () => {
+    editCategoryForm.put(route('categories.update', editingCategory.value.id), {
+        onSuccess: () => {
+            editingCategory.value = null
+            editCategoryForm.reset()
+        }
+    })
+}
+
+const cancelEditCategory = () => {
+    editingCategory.value = null
+    editCategoryForm.reset()
+}
+
+const deleteCategory = (categoryId) => {
+    if (confirm('Are you sure you want to delete this category? This will also remove it from all tasks.')) {
+        router.delete(route('categories.destroy', categoryId), {
+            onSuccess: () => {
+                // Refresh the page to update the categories list
+                router.reload()
+            }
+        })
+    }
 }
 
 const cancelEdit = () => {
@@ -121,61 +159,152 @@ const formatDate = (date) => {
                         <div class="p-6">
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Categories</h3>
                             <p class="text-gray-600 mb-4">Organize your tasks with categories</p>
-							<div class="flex gap-2">
-								<Link
-									:href="route('categories.index')"
-									class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
-								>
-									Manage Categories
-								</Link>
-								<button
-									@click="showCreateCategoryForm = !showCreateCategoryForm"
-									class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
-								>
-									{{ showCreateCategoryForm ? 'Cancel' : 'Add Category' }}
-								</button>
-							</div>
+                            <div class="flex gap-2">
+                                <Link
+                                    :href="route('categories.index')"
+                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
+                                >
+                                    Manage Categories
+                                </Link>
+                                <button
+                                    @click="showCreateCategoryForm = !showCreateCategoryForm"
+                                    class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
+                                >
+                                    {{ showCreateCategoryForm ? 'Cancel' : 'Add Category' }}
+                                </button>
+                            </div>
 
-							<div v-if="showCreateCategoryForm" class="mt-4 p-4 border rounded-lg bg-gray-50">
-								<h4 class="text-md font-medium text-gray-900 mb-4">Create New Category</h4>
-								<form @submit.prevent="createCategory" class="space-y-4">
-									<div>
-										<label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-										<input
-											v-model="categoryForm.name"
-											type="text"
-											class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-											required
-										/>
-									</div>
-									<div class="grid grid-cols-2 gap-4">
-										<div>
-											<label class="block text-sm font-medium text-gray-700 mb-1">Color *</label>
-											<input
-												v-model="categoryForm.color"
-												type="color"
-												class="h-10 w-16 p-0 border-gray-300 rounded-md shadow-sm cursor-pointer"
-											/>
-										</div>
-									</div>
-									<div class="flex justify-end gap-3">
-										<button
-											type="button"
-											@click="showCreateCategoryForm = false"
-											class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-										>
-											Cancel
-										</button>
-										<button
-											type="submit"
-											:disabled="categoryForm.processing"
-											class="bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium"
-										>
-											{{ categoryForm.processing ? 'Creating...' : 'Create Category' }}
-										</button>
-									</div>
-								</form>
-							</div>
+                            <!-- Create Category Form -->
+                            <div v-if="showCreateCategoryForm" class="mt-4 p-4 border rounded-lg bg-gray-50">
+                                <h4 class="text-md font-medium text-gray-900 mb-4">Create New Category</h4>
+                                <form @submit.prevent="createCategory" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                                        <input
+                                            v-model="categoryForm.name"
+                                            type="text"
+                                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Color *</label>
+                                            <input
+                                                v-model="categoryForm.color"
+                                                type="color"
+                                                class="h-10 w-16 p-0 border-gray-300 rounded-md shadow-sm cursor-pointer"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            @click="showCreateCategoryForm = false"
+                                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            :disabled="categoryForm.processing"
+                                            class="bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                        >
+                                            {{ categoryForm.processing ? 'Creating...' : 'Create Category' }}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Edit Category Form -->
+                            <div v-if="editingCategory" class="mt-4 p-4 border rounded-lg bg-blue-50">
+                                <h4 class="text-md font-medium text-gray-900 mb-4">Edit Category</h4>
+                                <form @submit.prevent="updateCategory" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                                        <input
+                                            v-model="editCategoryForm.name"
+                                            type="text"
+                                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Color *</label>
+                                            <div class="flex items-center gap-3">
+                                                <input
+                                                    v-model="editCategoryForm.color"
+                                                    type="color"
+                                                    class="h-10 w-20 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                />
+                                                <input
+                                                    v-model="editCategoryForm.color"
+                                                    type="text"
+                                                    placeholder="#3B82F6"
+                                                    class="flex-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                    pattern="^#[0-9A-Fa-f]{6}$"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            @click="cancelEditCategory"
+                                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            :disabled="editCategoryForm.processing"
+                                            class="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                        >
+                                            {{ editCategoryForm.processing ? 'Updating...' : 'Update Category' }}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Categories List -->
+                            <div v-if="categories.length > 0" class="mt-4">
+                                <h4 class="text-md font-medium text-gray-900 mb-3">Your Categories</h4>
+                                <div class="space-y-2">
+                                    <div
+                                        v-for="category in categories"
+                                        :key="category.id"
+                                        v-show="!editingCategory || editingCategory.id !== category.id"
+                                        class="flex items-center justify-between p-3 border rounded-lg hover:shadow-md transition-shadow"
+                                    >
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-4 h-4 rounded-full"
+                                                :style="{ backgroundColor: category.color }"
+                                            ></div>
+                                            <span class="font-medium text-gray-900">{{ category.name }}</span>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button
+                                                @click="editCategory(category)"
+                                                class="text-indigo-500 hover:text-indigo-600 text-xs"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                @click="deleteCategory(category.id)"
+                                                class="text-red-500 hover:text-red-600 text-xs"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-else-if="!showCreateCategoryForm && !editingCategory" class="mt-4 text-center py-4 text-gray-500">
+                                No categories yet. Click "Add Category" to create your first category.
+                            </div>
                         </div>
                     </div>
                 </div>

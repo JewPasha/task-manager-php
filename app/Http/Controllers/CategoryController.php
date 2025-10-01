@@ -66,6 +66,11 @@ class CategoryController extends Controller
             'color' => $request->color,
         ]);
 
+        // If the form was submitted from dashboard, go back there
+        if ($request->boolean('from_dashboard')) {
+            return redirect()->route('dashboard')->with('success', 'Category updated successfully.');
+        }
+
         return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
     }
 
@@ -74,6 +79,11 @@ class CategoryController extends Controller
         $this->authorize('delete', $category);
         
         $category->delete();
+
+        // If the request came from dashboard, go back there
+        if (request()->header('referer') && str_contains(request()->header('referer'), '/dashboard')) {
+            return redirect()->route('dashboard')->with('success', 'Category deleted successfully.');
+        }
 
         return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
     }
