@@ -9,6 +9,7 @@ const props = defineProps({
 })
 
 const showCreateForm = ref(false)
+const showCreateCategoryForm = ref(false)
 const editingTask = ref(null)
 
 const createForm = useForm({
@@ -16,6 +17,12 @@ const createForm = useForm({
     description: '',
     due_date: '',
     category_id: ''
+})
+
+const categoryForm = useForm({
+    name: '',
+    color: '#3B82F6',
+    from_dashboard: true,
 })
 
 const editForm = useForm({
@@ -47,6 +54,15 @@ const updateTask = () => {
         onSuccess: () => {
             editingTask.value = null
             editForm.reset()
+        }
+    })
+}
+
+const createCategory = () => {
+    categoryForm.post(route('categories.store'), {
+        onSuccess: () => {
+            categoryForm.reset()
+            showCreateCategoryForm.value = false
         }
     })
 }
@@ -105,20 +121,61 @@ const formatDate = (date) => {
                         <div class="p-6">
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Categories</h3>
                             <p class="text-gray-600 mb-4">Organize your tasks with categories</p>
-                            <div class="flex gap-2">
-                                <Link
-                                    :href="route('categories.index')"
-                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
-                                >
-                                    Manage Categories
-                                </Link>
-                                <Link
-                                    :href="route('categories.create')"
-                                    class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
-                                >
-                                    Add Category
-                                </Link>
-                            </div>
+							<div class="flex gap-2">
+								<Link
+									:href="route('categories.index')"
+									class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
+								>
+									Manage Categories
+								</Link>
+								<button
+									@click="showCreateCategoryForm = !showCreateCategoryForm"
+									class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium inline-block"
+								>
+									{{ showCreateCategoryForm ? 'Cancel' : 'Add Category' }}
+								</button>
+							</div>
+
+							<div v-if="showCreateCategoryForm" class="mt-4 p-4 border rounded-lg bg-gray-50">
+								<h4 class="text-md font-medium text-gray-900 mb-4">Create New Category</h4>
+								<form @submit.prevent="createCategory" class="space-y-4">
+									<div>
+										<label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+										<input
+											v-model="categoryForm.name"
+											type="text"
+											class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+											required
+										/>
+									</div>
+									<div class="grid grid-cols-2 gap-4">
+										<div>
+											<label class="block text-sm font-medium text-gray-700 mb-1">Color *</label>
+											<input
+												v-model="categoryForm.color"
+												type="color"
+												class="h-10 w-16 p-0 border-gray-300 rounded-md shadow-sm cursor-pointer"
+											/>
+										</div>
+									</div>
+									<div class="flex justify-end gap-3">
+										<button
+											type="button"
+											@click="showCreateCategoryForm = false"
+											class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+										>
+											Cancel
+										</button>
+										<button
+											type="submit"
+											:disabled="categoryForm.processing"
+											class="bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium"
+										>
+											{{ categoryForm.processing ? 'Creating...' : 'Create Category' }}
+										</button>
+									</div>
+								</form>
+							</div>
                         </div>
                     </div>
                 </div>

@@ -35,6 +35,11 @@ class CategoryController extends Controller
             'color' => $request->color,
         ]);
 
+        // If the form was submitted from dashboard, go back there
+        if ($request->boolean('from_dashboard')) {
+            return redirect()->route('dashboard')->with('success', 'Category created successfully.');
+        }
+
         return redirect()->route('categories.index')->with('success', 'Category created successfully.');
     }
 
